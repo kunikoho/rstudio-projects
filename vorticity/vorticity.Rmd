@@ -2,7 +2,9 @@
 title: "vorticity"
 author: "Sirish Shrestha"
 date: "August 13, 2017"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -259,6 +261,9 @@ dias.tbl <- table(echo.cluster$cluster, echo.cluster$Diastolic4count)
 
 chisq.test(dias.tbl)
 
+boxplot(echo.cluster$cluster ~ echo.cluster$Diastolic4count, xlab = "Cluster", ylab = "Diastolic4count", main = "Diastolic4count class by cluster")
+
+
 ```
 
 # Diastolic Dysfunction 3 or 4 of 4
@@ -267,6 +272,8 @@ chisq.test(dias.tbl)
 dias.dysfn.tbl <- table(echo.cluster$cluster, echo.cluster$DiastDysfunction3of4)
 
 chisq.test(dias.dysfn.tbl)
+
+boxplot(echo.cluster$cluster ~ echo.cluster$DiastDysfunction3of4, xlab = "Cluster", ylab = "DiastDysfunction3of4", main = "DiastDysfunction3of4 class by cluster")
 
 
 ```
@@ -280,6 +287,8 @@ low.ef.tbl <- table(echo.cluster$cluster, echo.cluster$DiastCount)
 chisq.test(low.ef.tbl)
 
 
+boxplot(echo.cluster$cluster ~ echo.cluster$DiastCount, xlab = "Cluster", ylab = "DiastCount", main = "DiastCount class by cluster")
+
 ```
 
 # Diastolic Dysfunction ASE (low EF or 3/4)
@@ -289,6 +298,9 @@ dias.dysfn.ase.tbl <- table(echo.cluster$cluster, echo.cluster$DiastDysfunASE)
 
 chisq.test(dias.dysfn.ase.tbl)
 
+
+boxplot(echo.cluster$cluster ~ echo.cluster$DiastDysfunASE, xlab = "Cluster", ylab = "DiastDysfunASE", main = "DiastDysfunASE class by cluster")
+
 ```
 
 # Etiology
@@ -297,6 +309,8 @@ chisq.test(dias.dysfn.ase.tbl)
 etiology.tbl <- table(echo.cluster$cluster, echo.cluster$Etiology)
 
 chisq.test(etiology.tbl)
+
+boxplot(echo.cluster$cluster ~ echo.cluster$Etiology, xlab = "Cluster", ylab = "Etiology", main = "Etiology class by cluster")
 
 ```
 
@@ -309,6 +323,8 @@ chisq.test(etiology.tbl)
 lv.ejection.tbl <- table(echo.cluster$cluster, echo.cluster$AbnormalEF50)
 
 chisq.test(lv.ejection.tbl)
+
+boxplot(echo.cluster$cluster ~ echo.cluster$AbnormalEF50, xlab = "Cluster", ylab = "AbnormalEF50", main = "AbnormalEF50 class by cluster")
 
 ```
 
