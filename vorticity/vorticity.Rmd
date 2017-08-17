@@ -3,8 +3,8 @@ title: "vorticity"
 author: "Sirish Shrestha"
 date: "August 13, 2017"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
