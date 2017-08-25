@@ -1,7 +1,7 @@
 ---
-title: "vorticity"
+title: "Vorticity"
 author: "Sirish Shrestha"
-date: "August 13, 2017"
+date: "August 25, 2017"
 output:
   html_document: default
   pdf_document: default
@@ -11,9 +11,9 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+# Echo Vorticity Analysis
 
-Read the data for vorticity analysis
+#### Read the data for vorticity analysis
 ```{r cars}
 
 setwd("C:/Users/siris/Documents/rstudio-projects/vorticity")
@@ -21,9 +21,10 @@ setwd("C:/Users/siris/Documents/rstudio-projects/vorticity")
 ## read all echo data
 echo <- read.csv("data.csv", header = TRUE, sep = ",", stringsAsFactors = TRUE)
 
+ncol(echo)
 
-summary(echo)
-str(echo)
+#summary(echo)
+#str(echo)
 ## There are several missing data. We only select the ones we care about - the vortex data.
 vorticity.data <- echo[,c(45:52)]
 
@@ -43,6 +44,11 @@ barplot(sapply(vorticity.data, var), horiz=T, las=1, cex.names=0.8)
 barplot(sapply(vorticity.data, var), horiz=T, las=1, cex.names=0.8, log='x')
 par(mar=mar)
 
+
+pc.unscaled <- princomp(vorticity.data)
+summary(pc.unscaled)
+loadings(pc.unscaled)
+plot(pc.unscaled)
 
 
 # Scale
@@ -64,9 +70,10 @@ plot(sapply(data2, var))
 # Proceed with principal components
 pc <- princomp(data2)
 plot(pc)
+
 plot(pc, type='l')
 summary(pc) # 4 components is both 'elbow' and explains >85% variance
-
+loadings(pc)
 
 
 # Get principal component vectors using prcomp instead of princomp
@@ -93,7 +100,7 @@ plot3d(comp$PC1, comp$PC3, comp$PC4)
 
 
 #### Load packages
-```{r}
+```{r, include=FALSE}
 suppressPackageStartupMessages(library(tidyverse))
 suppressPackageStartupMessages(library(cluster))
 suppressPackageStartupMessages(library(factoextra))
@@ -126,9 +133,9 @@ plot(hc1, cex = 0.6, hang = -1)
 
 ## For Hierarchical Clustering
 
-usig Agnes to check the cluster structure
+#### using Agnes to check the cluster structure
 
-```{r pressure, echo=FALSE}
+```{r, echo=TRUE}
 library(cluster)
 library(purrr)
 
@@ -157,6 +164,7 @@ require(graphics)
 
 # Ward's method
 hc5 <- hclust(dist(comp, method = "euclidean"), method = "ward.D2" )
+plot(hc5, cex = 0.6, hang = -1)
 
 # Cut tree into 4 groups
 k <- 4
