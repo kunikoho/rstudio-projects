@@ -1,0 +1,10 @@
+1. add zipcode distance from 26506
+
+Analysis: 
+
+- Descriptive
+- xtabs - outcome (Patient Status at DC), Echo Done, Cath Done with all other variables
+- glm outcome with everything else
+
+
+

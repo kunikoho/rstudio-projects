@@ -24,12 +24,30 @@ setwd("C:/Users/siris/Documents/rstudio-projects/vorticity")
 ## read all echo data
 echo <- read.csv("data.csv", header = TRUE, sep = ",", stringsAsFactors = TRUE)
 
+names(echo)[1] <- "ID"
+
+echo$Gender <- factor(echo$Gender)
+echo$NYHA <- factor(echo$NYHA)
+echo$Etiology <- factor(echo$Etiology)
+echo$DiastCount <- factor(echo$DiastCount)
+echo$DiastDysfunASE <- factor(echo$DiastDysfunASE)
+echo$DiastDysfunction3of4 <- factor(echo$DiastDysfunction3of4)
+echo$Diastolic4count <- factor(echo$Diastolic4count)
+
+summary(echo)
+
 ncol(echo)
+
+# Missing variables
+sapply(echo, function(x) mean(is.na(x)))
+
 
 #summary(echo)
 #str(echo)
 ## There are several missing data. We only select the ones we care about - the vortex data.
 vorticity.data <- echo[,c(45:52)]
+
+cor(vorticity.data)
 
 #without scaling
 heatmap(as.matrix(vorticity.data))
@@ -43,16 +61,11 @@ plot(vorticity.data)
 
 
 
-mar <- par()$mar
-par(mar=mar+c(0,5,0,0))
-
 # seems like the variables are in different scales
 barplot(sapply(vorticity.data, var), horiz=T, las=1, cex.names=0.8)
 
 # in log scale
 barplot(sapply(vorticity.data, var), horiz=T, las=1, cex.names=0.8, log='x')
-par(mar=mar)
-
 
 pc.unscaled <- princomp(vorticity.data)
 summary(pc.unscaled)
@@ -133,10 +146,10 @@ library(dendextend) # for comparing two dendrograms
 d <- dist(comp, method = "euclidean")
 
 # Hierarchical clustering using Complete Linkage
-hc1 <- hclust(d, method = "complete" )
+hc5 <- hclust(d, method = "complete" )
 
 # Plot the obtained dendrogram
-plot(hc1, cex = 0.6, hang = -1)
+plot(hc5, cex = 0.6, hang = -1)
 
 
 
@@ -187,6 +200,16 @@ sub_grp <- cutree(hc5, k = k)
 echo.cluster <- echo %>%
 mutate(cluster = sub_grp)
 
+#age range
+echo.cluster$age.range <- cut(echo.cluster$Age, breaks=c(0,40, 60, 80, 200), right = FALSE, labels = c("<40", "40-60", "60-80", "80+"))
+
+
+# Age range by cluster
+# 1 : 0-39
+# 2:  40 - 59
+# 3:  60 - 79
+# 4:  80 +
+
 # Cluster centroids
 
 # function to find medoid in cluster i
@@ -217,7 +240,14 @@ fviz_cluster(list(data = vorticity.data, cluster = sub_grp))
 cluster3 <- echo.cluster[echo.cluster$cluster == 3, ]
 cluster2 <- echo.cluster[echo.cluster$cluster == 2, ]
 
+echo.cluster[echo.cluster$cluster==unique(sub_grp)[3],c(10,24)]
 
+echo.cluster[echo.cluster$cluster==unique(sub_grp)[4],c(10,24)]
+
+# Gender count by age range
+xtabs(~ age.range + Gender, data = echo.cluster)
+
+summary(cluster3)
 
 ```
 #PCA plot with cluster
@@ -244,7 +274,7 @@ plot3d(comp$PC1, comp$PC3, comp$PC4, col=sub_grp)
 
 
 # Cluster sizes
-sort(table(sub_grp))
+(table(sub_grp))
 clust <- names(sort(table(sub_grp)))
 
 # First cluster
@@ -262,19 +292,6 @@ for(i in 1:k){
 
 ```
 
-
-# compare vars in 
-
-```{r}
-
-echo.cluster[echo.cluster$cluster==unique(sub_grp)[3],c(10,24)]
-
-echo.cluster[echo.cluster$cluster==unique(sub_grp)[4],c(10,24)]
-
-
-
-```
-
 # Analysis of demographics with cluster
 # Chi square Test
       
@@ -286,7 +303,7 @@ echo.chisq.fn <- function(x){
     
     chi.var.name <- colnames(echo.cluster[x[i]])
     
-    echo.table[[chi.var.name]] <- table(cluster = echo.cluster$cluster, Var = echo.cluster[[chi.var.name]])
+    echo.table[[chi.var.name]] <- xtabs(~ echo.cluster$cluster + echo.cluster[[chi.var.name]], data = echo.cluster)
     
     cat("Var name: ", chi.var.name, "\n")
     cat("------------------------------\n\n")
@@ -303,21 +320,101 @@ echo.chisq.fn <- function(x){
     print(echo.chisq.test)
     
     cat("\n\n")
-    boxplot(echo.cluster[[chi.var.name]] ~ echo.cluster$cluster, 
+    boxplot(as.numeric(as.character(echo.cluster[[chi.var.name]])) ~ echo.cluster$cluster, 
             xlab = "Cluster", 
             ylab = chi.var.name, 
             main = paste("Cluster by ", chi.var.name))
     
     cat("\n\n=======================================================================\n\n")
+    
+  
   }
   
   
 } 
 
+tables<-contingency.tables(row.vars=cluster, col.vars=Gender, data=echo.cluster)
+print(tables)
+
+tables<-contingency.tables(row.vars=cluster, col.vars=Etiology, data=echo.cluster)
+print(tables)
+
+tables<-contingency.tables(row.vars=cluster, col.vars=NYHA, data=echo.cluster)
+print(tables)
+
+tables<-contingency.tables(row.vars=cluster, col.vars=AbnormalEF50, data=echo.cluster)
+print(tables)
+
+tables<-contingency.tables(row.vars=cluster, col.vars=Tracking, data=echo.cluster)
+print(tables)
+
+tables<-contingency.tables(row.vars=cluster, col.vars=LAVI35, data=echo.cluster)
+print(tables)
+
+tables<-contingency.tables(row.vars=cluster, col.vars=SeptTDIe7, data=echo.cluster)
+print(tables)
+
+tables<-contingency.tables(row.vars=cluster, col.vars=LatTDIe10, data=echo.cluster)
+print(tables)
+
+tables<-contingency.tables(row.vars=cluster, col.vars=EtoTDIe14, data=echo.cluster)
+print(tables)
+
+tables<-contingency.tables(row.vars=cluster, col.vars=TRVmax, data=echo.cluster)
+print(tables)
+
+tables<-contingency.tables(row.vars=cluster, col.vars=Diastolic4count, data=echo.cluster)
+print(tables)
+
+tables<-contingency.tables(row.vars=cluster, col.vars=DiastDysfunction3of4, data=echo.cluster)
+print(tables)
+
+tables<-contingency.tables(row.vars=cluster, col.vars=DiastCount, data=echo.cluster)
+print(tables)
+
+tables<-contingency.tables(row.vars=cluster, col.vars=DiastDysfunASE, data=echo.cluster)
+print(tables)
+
+
+
+
 
 echo.table <- list()
-chisq.cols <- c(4, 9, 24, 61:64)
+chisq.cols <- c(4, 9, 10, 24,44, 56:64)
 echo.chisq.fn(chisq.cols)
+
+
+
+```
+
+
+```{r }
+
+library(fifer)
+# More Chisq.test
+
+# No statistically significant association across strata
+ctg <- xtabs(~ cluster + age.range + Gender, data = echo.cluster)
+mantelhaen.test(ctg, exact = TRUE)
+summary(ctg)
+
+cta <- xtabs(~ cluster + Gender + age.range, data = echo.cluster)
+mantelhaen.test(cta, exact = TRUE)
+summary(cta)
+
+
+ct1 <- xtabs( ~ NYHA + cluster + AbnormalEF50, data = echo.cluster)
+mantelhaen.test(ct1,exact = TRUE)
+summary(ct1)
+
+
+chisq.post.hoc(xtabs(~ cluster + NYHA, echo.cluster), control = "bonferroni")
+
+chisq.post.hoc(xtabs(~ cluster + AbnormalEF50, echo.cluster), control = "bonferroni")
+
+chisq.post.hoc(xtabs(~ cluster + Tracking, echo.cluster), control = "bonferroni")
+
+chisq.post.hoc(xtabs(~ cluster + SeptTDIe7, echo.cluster), control = "bonferroni")
 
 
 
@@ -327,15 +424,6 @@ echo.chisq.fn(chisq.cols)
 
 ```{r}
 
-#age range
-echo.cluster$age.range <- cut(echo.cluster$Age, breaks=c(0,40, 60, 80, 200), right = FALSE, labels = c("1", "2", "3", "4"))
-
-
-# Age range by cluster
-# 1 : 0-39
-# 2:  40 - 59
-# 3:  60 - 79
-# 4:  80 +
 
 age.table <- table(echo.cluster$cluster, echo.cluster$age.range)
 
@@ -373,8 +461,7 @@ echo.aov.fn <- function(x){
           cat('var.name: ', var.name, '\n')
           cat("=============================\n\n")
           
-          print(echo.aov[[var.name]])
-          
+          print(summary(echo.aov[[var.name]]))
           cat("\n\n")
           # Perform Tukey HSD Test
           tukey <- TukeyHSD(echo.aov[[var.name]])
@@ -393,8 +480,19 @@ echo.aov.fn <- function(x){
     return("Done")
 }
 echo.aov <- list()
-columns <- c(3, 5:8,11:23,25:35)
+columns <- c(3, 5:8,11:23,25:43,45:55)
 echo.aov.fn(columns)
+
+
+
+tmp <- sapply(echo.cluster[,c(3, 5:8,11:23,25:43,45:55)], function(x) rbind(mean = mean(x, na.rm = T),
+                                                        sd = sd(x, na.rm = T),
+                                                        maximum = max(x, na.rm = T),
+                                                        minimum = min(x, na.rm = T),
+                                                        missing = mean(is.na(x))
+                                                    ))
+dftmp <- t(tmp)
+colnames(dftmp) <- c("mean", "sd", "max", "min", "%.missing")
 
 
 

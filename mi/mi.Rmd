@@ -1,0 +1,157 @@
+---
+title: "Myocardial Infarction"
+author: "Sirish Shrestha"
+date: "August 28, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Load packages
+```{r}
+library(stringr)
+library(stringi)
+
+```
+
+```{r}
+setwd("C:/Users/siris/Documents/rstudio-projects/mi")
+
+## read all echo data
+mi <- read.csv("echo-deidentified.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE, na.strings = c("", " ", "NA", "#NAME?", "None", "\n", "-- (unsure of most recent weight; patient unsteady.)", "-- (vent with 100% FIO )"))
+dim(mi)
+
+#clean up data
+mi <- mi[-34]
+
+names(mi)[14] <- "Marital.status"
+names(mi)[1] <- "ID"
+names(mi) <- tolower(names(mi))
+
+# clean up age
+mi$age <- as.numeric(mi$age)
+
+# gender
+mi$gender <- factor(mi$gender)
+
+# dx.disregard
+mi$dx.disregard. <- factor(mi$dx.disregard.)
+
+mi$cc <- factor(mi$cc)
+mi$zip.code <- factor(mi$zip.code)
+mi$primary.problem <- factor(mi$primary.problem)
+mi$marital.status <- factor(mi$marital.status)
+mi$tobacco <- factor(mi$tobacco)
+mi$patient.status.at.dc <- factor(mi$patient.status.at.dc)
+
+
+mi$race[grepl("Asian", mi$race, ignore.case = T)] <- "Asian"
+mi$race[grepl("white", mi$race, ignore.case = T)] <- "Caucasian"
+mi$race[grepl("Black", mi$race, ignore.case = T)] <- "African American"
+mi$race[grepl("Hispanic", mi$race, ignore.case = T)] <- "Hispanic"
+mi$race[grepl("Hawaiian", mi$race, ignore.case = T)] <- "Native Hawaiian/Pacific Islander"
+
+mi$race <- factor(mi$race)
+
+
+# conver date to date format
+mi$date.of.admission <- as.Date(mi$date.of.admission, "%m/%d/%Y")
+mi$date.of.discharge <- as.Date(mi$date.of.discharge, "%m/%d/%Y")
+mi$next.pcp.visit <- as.Date(mi$next.pcp.visit, "%m/%d/%Y")
+
+
+# fix o2.device factors 
+#mi$o2.device[mi$o2.device == "#NAME?"] <- NA
+mi$o2.device[mi$o2.device == "NC (4 lpm)"] <- "NC"
+mi$o2.device[mi$o2.device == "NC (at rest)"] <- "NC"
+mi$o2.device[mi$o2.device == "CP (home cpap machine)"] <- "CP"
+mi$o2.device[mi$o2.device == "RA (after ambulation)"] <- "RA"
+mi$o2.device[mi$o2.device == "RA (ambulating in hall on room air)"] <- "RA"
+mi$o2.device[mi$o2.device == "RA (Replaced on 2 L NC.)"] <- "RA"
+mi$o2.device[mi$o2.device == "RA (Simultaneous filing. User may not have seen previous data.)"] <- "RA"
+
+mi$o2.device <- factor(mi$o2.device)
+# levels(mi$o2.device)
+
+
+
+# weight
+#mi$weight[mi$weight == "#NAME?"] <- NA
+# mi$weight[mi$weight == "-- (unsure of most recent weight; patient unsteady.)"] <- NA
+
+#mi$weight <- as.numeric(mi$weight)
+
+
+
+# bnp fix
+mi$bnp <- as.numeric(str_extract(mi$bnp, "\\(?[0-9,.]+\\)?"))
+mi$troponin <- as.numeric(str_extract(mi$troponin, "\\(?[0-9,.]+\\)?"))
+
+# fix sbp
+mi$sbp <- as.numeric(str_extract(mi$sbp, "[0-9]+"))
+
+#fix dbp
+mi$dbp <- as.numeric(str_extract(mi$dbp, "[0-9]+"))
+
+# pulse
+mi$pulse <- as.numeric(str_extract(mi$pulse, "[0-9]+"))
+
+mi$resp <- as.numeric(str_extract(mi$resp, "[0-9]+"))
+
+
+# pulse oximetry
+mi$pulse.oximetry <- as.numeric(str_extract(mi$pulse.oximetry, "[0-9]+"))
+
+# o2.l.min
+mi$o2.l.min <- as.numeric(str_extract(mi$o2.l.min, "[0-9]+"))
+
+mi$echo <- factor(mi$echo)
+mi$cath <- factor(mi$cath)
+
+str(mi)
+
+
+```
+
+```{r description}
+
+num <- sapply(mi, is.numeric)
+
+
+mi.numeric <- mi[,num]
+mi.cat <- mi[, !num]
+
+describe(mi.numeric)
+summary(mi.cat)
+
+
+plot(mi$patient.status.at.dc)
+
+low.missing <- sapply(mi, function(x) mean(is.na(x)) < 0.10)
+new.mi <- mi[,low.missing]
+new.mi <- subset(mi, select = -c(1,3))
+
+new.mi$num.of.days.in.hospital <- new.mi$date.of.discharge - new.mi$date.of.admission
+
+# mean stay in the hospital
+mean(new.mi$num.of.days.in.hospital)
+max(new.mi$num.of.days.in.hospital)
+min(new.mi$num.of.days.in.hospital)
+plot(mi$patient.status.at.dc)
+
+
+# average dead and alive people stay
+
+
+
+
+
+
+
+
+
+
+
+```
