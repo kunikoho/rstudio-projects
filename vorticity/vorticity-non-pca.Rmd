@@ -40,6 +40,7 @@ library(graphics)
 library(RColorBrewer)
 library(fifer)
 library(fpc)
+library(vcd)
 
 ```
 
@@ -61,6 +62,7 @@ names(echo)[1] <- "ID"
 
 echo$Gender <- factor(echo$Gender)
 echo$NYHA <- factor(echo$NYHA)
+echo$AbnormalEF50 <- factor(echo$AbnormalEF50)
 echo$Etiology <- factor(echo$Etiology)
 echo$DiastCount <- factor(echo$DiastCount)
 echo$DiastDysfunASE <- factor(echo$DiastDysfunASE)
@@ -72,26 +74,37 @@ echo$LatTDIe10 <- factor(echo$LatTDIe10)
 echo$EtoTDIe14 <- factor(echo$EtoTDIe14)
 echo$TRVmax <- factor(echo$TRVmax)
 echo$Tracking <- factor(echo$Tracking)
-echo$hr <- 60000/echo$TimePIVRRms
+
+# calculate HR if there are missing values
+echo$HRmin <- ifelse(!is.na(echo$HRmin), echo$HRmin, 60000/echo$TimePIVRRms)
+
 
 dim(echo)
 
 str(echo)
 
+bkup <- echo
+
 summary(echo)
+
+# remove variables that has more than 12% missing data
+echo <- echo[, colMeans(is.na(echo)) < 0.12]
+
 sapply(echo, function(x) round(mean(is.na(x)), 2))
 
-
 #remove the diastolic data and ID for heatmap
-echo.matrix <- data.matrix(echo[,-c(1,61:64)])
+echo.matrix <- data.matrix(echo[,-c(1,2,41:44)])
 echo.matrix <- scale(echo.matrix)
 
 summary(echo.matrix)
 
 heatmap(echo.matrix, Rowv = NA, Colv = NA)
 
+vortex.names <- c("VortexArea", "VortexIntensity", "VortexDepth", "VortexLength", "EnergyDissipation", "VorticityFluctuation", "KineticEnergyFluctuation", "ShearStressFluctuation")
+
+
 ## There are several missing data. We only select the ones we care about - the vortex data.
-vorticity.data <- echo.matrix[,c(44:51)]
+vorticity.data <- echo.matrix[,vortex.names]
 
 cor(vorticity.data)
 
@@ -101,7 +114,7 @@ summary(vorticity.data)
 heatmap(vorticity.data)
 
 
-#
+# 
 plot(data.frame(vorticity.data))
 
 
@@ -120,17 +133,17 @@ plot(data.frame(vorticity.data))
 ###Hierarchical Clustering packages
 
 ```{r}
-
-# Dissimilarity matrix
-d <- dist(vorticity.data, method = "euclidean")
-
-# Hierarchical clustering using Complete Linkage
-hc1 <- hclust(d, method = "complete" )
-
-# Plot the obtained dendrogram
-plot(hc1, cex = 0.6, hang = -1)
-
-
+# 
+# # Dissimilarity matrix
+# d <- dist(vorticity.data, method = "euclidean")
+# 
+# # Hierarchical clustering using Complete Linkage
+# hc1 <- hclust(d, method = "complete" )
+# 
+# # Plot the obtained dendrogram
+# plot(hc1, cex = 0.6, hang = -1)
+# 
+# 
 
 ```
 
@@ -180,15 +193,17 @@ plot(fit, cex = 0.6, hang = -1)
 
 #Silhouette analysis for determining the number of clusters
 
-asw <- numeric(20)
-for (k in 2:20)
-  asw[[k]] <- pam(vorticity.data.frame, k) $ silinfo $ avg.width
-k.best <- which.max(asw)
-
-plot(pam(d,k.best), color = c(1,2,3))
+# asw <- numeric(20)
+# for (k in 2:20)
+#   asw[[k]] <- pam(vorticity.data.frame, k) $ silinfo $ avg.width
+# k.best <- which.max(asw)
+# 
+# plot(pam(d,k.best), color = c(1,2,3))
 
 # Cut tree into 4 groups
-k <- k.best
+# k <- k.best
+k <- 4
+# sub_grp <- cutree(fit, k = k)
 sub_grp <- cutree(fit, k = k)
 
 #echo.cluster <- echo %>%
@@ -221,10 +236,10 @@ fviz_cluster(list(data = vorticity.data, cluster = sub_grp))
 
 ```{r}
 
-
-palette(alpha(brewer.pal(9, 'Set1'), 0.5))
-plot(vorticity.data, col=sub_grp, pch=16)
-
+# 
+# palette(alpha(brewer.pal(9, 'Set1'), 0.5))
+# plot(vorticity.data, col=sub_grp, pch=16)
+# 
 
 
 ```
@@ -246,8 +261,8 @@ vorticity.cluster <- split(data.frame(vorticity.data), sub_grp)
 
 # on unsacled data
 
-vorticity.cluster.unscaled <- split(data.frame(vorticity.data.cluster[,c(45:52, 65)]), sub_grp)
-(voriticy.cluster.unscaled.colmeans <- (sapply(vorticity.cluster.unscaled, colMeans)))
+#vorticity.cluster.unscaled <- split(data.frame(vorticity.data.cluster[,c(45:52, 65)]), sub_grp)
+#(voriticy.cluster.unscaled.colmeans <- (sapply(vorticity.cluster.unscaled, colMeans)))
 
 clust <- names(sort(table(sub_grp)))
 
@@ -259,23 +274,40 @@ clust <- names(sort(table(sub_grp)))
 #row.names(echo.cluster[sub_grp==clust[3],])
 
 for(i in 1:k){
-  cat(paste('# Cluster', i, "\n"))
-  r <- row.names(vorticity.data.cluster[sub_grp==clust[i],])
-  cat(r, "\n\n")
+  
+  cluster.group <- row.names(vorticity.data.cluster[sub_grp == i, ])
+  
+  cat(paste('# Cluster', i, "(", length(cluster.group), ")\n"))
+
+  cat(cluster.group, "\n\n")
 }
 
-```
 
+
+```
+```{r}
+# vorticity.data.frame means/sd by cluster
+
+
+vorticity.data.cluster[c(vortex.names, "cluster")] %>% 
+  gather(row, val, -cluster) %>% 
+  group_by(cluster, row) %>% 
+  summarise_all(funs(Mean=mean, `Std.Dev`=sd, Median=median)) %>% 
+  gather(col, val, Mean, `Std.Dev`, Median) %>% 
+  unite("col", cluster, col) %>% 
+  spread(col, val) 
+
+
+```
 
 # compare vars in 
 
 ```{r}
 
-a <- vorticity.data.cluster[vorticity.data.cluster$cluster==unique(sub_grp)[1],c(10,24)]
-b <- vorticity.data.cluster[vorticity.data.cluster$cluster==unique(sub_grp)[2],c(10,24)]
-c <- vorticity.data.cluster[vorticity.data.cluster$cluster==unique(sub_grp)[3],c(10,24)]
-d <- vorticity.data.cluster[vorticity.data.cluster$cluster==unique(sub_grp)[4],c(10,24)]
-
+(a <- vorticity.data.cluster[vorticity.data.cluster$cluster==unique(sub_grp)[1],c("NYHA","AbnormalEF50")])
+(b <- vorticity.data.cluster[vorticity.data.cluster$cluster==unique(sub_grp)[2],c("NYHA","AbnormalEF50")])
+(c <- vorticity.data.cluster[vorticity.data.cluster$cluster==unique(sub_grp)[3],c("NYHA","AbnormalEF50")])
+(d <- vorticity.data.cluster[vorticity.data.cluster$cluster==unique(sub_grp)[4],c("NYHA","AbnormalEF50")])
 
 
 ```
@@ -293,6 +325,14 @@ xtabs(~ age.range + Gender, data = cluster3)
 
 summary(cluster3)
 
+
+library(psych)
+
+describe(vorticity.data.cluster)
+
+
+
+
 ```
 
 
@@ -300,31 +340,58 @@ summary(cluster3)
 # Chi square Test
       
 ```{r}
-echo.table <- list()
+# library(Deducer)
+library(dplyr)
 
 echo.chisq.fn <- function(x){
   
   
   for(i in 1:length(x)){
   
-    chi.var.name <- colnames(vorticity.data.cluster[x[i]])
+    # chi.var.name <- colnames(vorticity.data.cluster[x[i]])
   
-    echo.table[[chi.var.name]] <- xtabs(~ cluster + vorticity.data.cluster[[chi.var.name]], data = vorticity.data.cluster)
+    chi.var.name <- x[i]
+    
+    # echo.table[[chi.var.name]] <- xtabs(~ cluster + vorticity.data.cluster[[chi.var.name]], data = vorticity.data.cluster)
+    
+    echo.table <- xtabs(~ cluster + vorticity.data.cluster[[chi.var.name]], data = vorticity.data.cluster)
     
     cat("Var name: ", chi.var.name, "\n")
     cat("------------------------------\n\n")
     
     cat("2-way Table\n")
     cat("============\n")
-    print(echo.table[[chi.var.name]])
+    # print(echo.table[[chi.var.name]])
+    var.table <- table(vorticity.data.cluster[[chi.var.name]])
+    print(var.table)
+    
+    freq.table <- as.data.frame(var.table)
+    
+    freq.table$prop <- prop.table(var.table)
+
+    print(freq.table)
+
+    #print(prop.table(table(vorticity.data.cluster[[chi.var.name]])))
+    #print(prop.table(echo.table))
+    
+    # Contingency Table
+    # print(contingency.tables(row.vars = cluster, col.vars = vorticity.data.cluster[chi.var.name], data = vorticity.data.cluster))
+    
     cat("\n\n\n")
     
     cat("Chi-Square test\n")
     cat("================\n\n")
     cat(chi.var.name)
-    echo.chisq.test <- chisq.test(echo.table[[chi.var.name]])
+    #echo.chisq.test <- chisq.test(echo.table[[chi.var.name]])
+    
+    #echo.chisq.test <- fisher.test(echo.table[[chi.var.name]])
+    
+    
+    echo.chisq.test <- summary(echo.table)
     
     chisq.p.value <- echo.chisq.test$p.value
+    
+    cat("P-value: ",chisq.p.value,"\n\n")
     
     if(chisq.p.value <= 0.05)
     {
@@ -333,30 +400,46 @@ echo.chisq.fn <- function(x){
       
       cat("\n\n")
       
-      mosaicplot(echo.table[[chi.var.name]], xlab="Cluster", ylab=chi.var.name, main = paste("Cluster-", chi.var.name, " mosaic plot"))
+      post.hoc <- chisq.post.hoc(echo.table, control = "bonferroni")
       
-      boxplot(as.numeric(as.character(vorticity.data.cluster[[chi.var.name]])) ~ vorticity.data.cluster$cluster, 
-              xlab = "Cluster", 
-              ylab = chi.var.name, 
-              main = paste("Cluster by ", chi.var.name))
       
+      print(post.hoc)
+      
+      cat("\n\n")
+      
+      # mosaicplot(echo.table[[chi.var.name]], xlab="Cluster", ylab=chi.var.name, main = paste("Cluster-", chi.var.name, " mosaic plot"))
+      
+      mosaicplot(echo.table, xlab="Cluster", ylab=chi.var.name, main = paste("Cluster-", chi.var.name, " mosaic plot"), shade = T)
+      
+      # boxplot(as.numeric(as.character(vorticity.data.cluster[[chi.var.name]])) ~ vorticity.data.cluster$cluster, 
+      #         xlab = "Cluster", 
+      #         ylab = chi.var.name, 
+      #         main = paste("Cluster by ", chi.var.name))
+      # 
       cat("\n\n=======================================================================\n\n")
     }
   }
-  
-  
 } 
 
+factor.data <- vorticity.data.cluster[,sapply(vorticity.data.cluster, is.factor) & colnames(vorticity.data.cluster) != c("id", "Country")]
+
+#chisq.cols <- c(4, 9, 10, 24, 44, 56:64,66)
+echo.chisq.fn(names(factor.data))
+
+d1 <- xtabs(~ cluster + DiastCount, data = vorticity.data.cluster)
+d2 <- xtabs(~ cluster + DiastDysfunASE, data = vorticity.data.cluster)
+d3 <- xtabs(~ cluster + Diastolic4count, data = vorticity.data.cluster)
+d4 <- xtabs(~ cluster + DiastDysfunction3of4, data = vorticity.data.cluster)
 
 
-chisq.cols <- c(4, 9, 10, 24, 44, 56:64,66)
-echo.chisq.fn(chisq.cols)
+mosaicplot(d1, xlab="Cluster", ylab="DiastCount", main = "Cluster - DiastCount mosaic plot", shade = T)
+
+mosaicplot(d2, xlab="Cluster", ylab="DiastDysfunASE", main = "Cluster - DiastDysfunASE mosaic plot", shade = T)
+mosaicplot(d3, xlab="Cluster", ylab="Diastolic4count", main = "Cluster - Diastolic4count mosaic plot", shade = T)
+mosaicplot(d4, xlab="Cluster", ylab="DiastDysfunction3of4", main = "Cluster - DiastDysfunction3of4 mosaic plot", shade = T)
 
 
-
-chisq.post.hoc(xtabs(~ cluster + NYHA, vorticity.data.cluster), control = "bonferroni")
-
-chisq.post.hoc(xtabs(~ cluster + AbnormalEF50, vorticity.data.cluster), control = "bonferroni")
+# chisq.post.hoc(xtabs(~ cluster + AbnormalEF50, vorticity.data.cluster), control = "bonferroni")
 
 
 ```
@@ -449,10 +532,13 @@ echo.aov.fn <- function(x){
     
     for(i in 1:length(x)){
       
-      var.name <- colnames(vorticity.data.cluster[x[i]])
-
+      # var.name <- colnames(vorticity.data.cluster[x[i]])
+    
+      var.name <- x[i]
       
-      k.test <- kruskal.test(vorticity.data.cluster[[var.name]] ~ as.factor(vorticity.data.cluster$cluster))
+      formula <- vorticity.data.cluster[[var.name]] ~ as.factor(vorticity.data.cluster$cluster)
+      
+      k.test <- kruskal.test(formula)
       
       # Show the variable name
       cat("==============================================================================\n")
@@ -460,7 +546,7 @@ echo.aov.fn <- function(x){
       
       p.value <- k.test$p.value
       
-      boxplot(vorticity.data.cluster[[var.name]] ~ factor(cluster), data=vorticity.data.cluster, xlab="Cluster", ylab=var.name, main=paste(var.name, " by cluster"))
+      boxplot(formula, data=vorticity.data.cluster, xlab="Cluster", ylab=var.name, main=paste(var.name, " by cluster"))
       
       # Print the p-value
       cat(paste("P-value: ", p.value))
@@ -477,7 +563,7 @@ echo.aov.fn <- function(x){
           
           cat("\n\n")
 
-          dunn <- dunnTest(vorticity.data.cluster[[var.name]] ~ factor(cluster), data = vorticity.data.cluster, method ="bonferroni", na.action(na.omit(NA)))
+          dunn <- dunnTest(formula, data = vorticity.data.cluster, method ="bonferroni", na.action(na.omit(NA)))
           
           print(dunn)
           
@@ -495,8 +581,11 @@ echo.aov.fn <- function(x){
 }
 
 
-columns <- c(3, 5:8,11:23,25:36,53:55,65)
-echo.aov.fn(columns)
+not.factor.data <- vorticity.data.cluster[,sapply(vorticity.data.cluster, is.numeric) & colnames(vorticity.data.cluster) != "id"]
+
+
+#columns <- c(3, 5:8,11:23,25:36,53:55,65)
+echo.aov.fn(names(not.factor.data))
 
 
 
@@ -506,6 +595,17 @@ echo.aov.fn(columns)
 ```
 
 
+```{r}
+
+
+
+
+
+
+
+
+
+```
 
 
 

@@ -13,6 +13,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(stringr)
 library(stringi)
+library(psych)
+
 
 ```
 
@@ -112,6 +114,8 @@ mi$cath <- factor(mi$cath)
 
 str(mi)
 
+write.csv(file = "mi_clean_data.csv", x = mi)
+
 
 ```
 
@@ -123,7 +127,11 @@ num <- sapply(mi, is.numeric)
 mi.numeric <- mi[,num]
 mi.cat <- mi[, !num]
 
-describe(mi.numeric)
+stats <- describe(mi.numeric)
+stats <- subset(stats, select = c(2, 3,4,5,8,9,10,13))
+stats$missing <- round(mean(is.na(mi.numeric)), 3)
+stats
+
 summary(mi.cat)
 
 
@@ -142,10 +150,29 @@ min(new.mi$num.of.days.in.hospital)
 plot(mi$patient.status.at.dc)
 
 
-# average dead and alive people stay
+# on average dead and alive people stay
+avg.stay.by.status <- aggregate(num.of.days.in.hospital ~ patient.status.at.dc, data = new.mi, FUN = mean)
+avg.stay.by.status
+
+boxplot(avg.stay.by.status, col = 1:2)
+
+xt <- function(x){
+    
+    tabs <- xtabs(~ x + mi$patient.status.at.dc, na.action = na.omit)
+    cat(tabs,"\n\n")
+    cat("===========\n\n")
+    print(tabs)    
+}
+
+mi.cat.subset <- subset(mi.cat, select = c(1,9,10,12,14,15,16))
+  
+lapply(mi.cat.subset, function(x) xt(x))
 
 
+```
 
+```{r}
+# GLM
 
 
 

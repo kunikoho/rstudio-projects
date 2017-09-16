@@ -1,0 +1,95 @@
+---
+title: "hsECG"
+author: "Sirish Shrestha"
+date: "September 14, 2017"
+output: html_document
+---
+
+```{r setup, include=TRUE, echo=FALSE}
+
+library(psych)
+
+
+setwd("C:/Users/siris/Documents/rstudio-projects/hsECG")
+
+
+
+## read all echo data
+ecg <- read.csv("hsECG.csv", header = TRUE, sep = ",", stringsAsFactors = TRUE, na.strings = c("", " ", "NA", "N/A?", ".", "\n"))
+
+ecg <- ecg[, -c(28,203)]
+
+
+
+names(ecg) <- tolower(names(ecg))
+names(ecg)[1] <- "trial.id"
+names(ecg)[4] <- "age"
+names(ecg)[9] <- "weight"
+names(ecg)[10] <- "height"
+names(ecg)[11] <- "bsa"
+names(ecg)[12] <- "bmi"
+names(ecg)[27] <- "tachycardia"
+names(ecg)[28] <- "hr"
+names(ecg)[29] <- "systolic"
+names(ecg)[30] <- "diastolic"
+names(ecg)[32] <- "o2"
+
+
+
+
+factor.vars <- c(5,6,7,8,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79.80,81,82,83,84,85,86,87,110,111,112,113,114,115,116,117,118,120,121,122,123,124,125,126,138,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,177,178,197,198,199,200,201)
+
+date.vars <- c(2,48,88,109,119,127,179,195)
+
+numeric.var <- c(4,9:12,28:32,89:108,128:134:137,139:160,176,180:194,196)
+
+ecg[,factor.vars] <- lapply(ecg[,factor.vars], factor)
+ecg[,date.vars] <- lapply(ecg[,date.vars], function(x) as.Date(x,"%m/%d/%Y"))
+ecg[,numeric.var] <- lapply(ecg[,numeric.var], function(x) as.numeric(x))
+
+#removing variables with less data
+ecg <- ecg[,-c(89:95,119:126,179:201)]
+
+
+is.date <- lapply(ecg, function(x) inherits(x, "Date"))
+
+for (i in 2:length(ecg)){
+  
+  if(!is.date[[i]]){
+    cat(names(ecg[i]),"\n")
+    cat("=================\n\n")
+    
+    if(is.factor(ecg[[i]])){
+      cat("Count\n=====")
+      print(table(ecg[[i]]))
+      cat("\nPercentage\n==========")
+      print(prop.table(table(ecg[[i]])),4)
+      cat("\n")
+      barplot(table(ecg[[i]]), main=names(ecg[i]))  
+    }
+    else{
+      summ <- describe(ecg[i])
+      summ$missing <- round(mean(is.na(ecg[[i]])),4)
+      
+      var.summ <- cbind(summ$mean, "|", summ$median, "|", summ$sd, "|", summ$min, "|", summ$max, "|", summ$missing, "|", summ$n)
+      colnames(var.summ) <- c("Mean","|", "Median","|", "Std.Dev","|", "Min","|", "Max","|", "Missing.%","|","N")
+      cat("\nDescription\n===========\n")
+      print(var.summ)
+      cat("\n")
+      par(mfrow=c(1,2))
+      hist(ecg[[i]], main=names(ecg[i]))  
+      
+      hist(ecg[[i]], main=names(ecg[i]), probability = TRUE)
+      lines(density(ecg[[i]]))
+      par(mfrow=c(1,1))
+    }
+    cat("\n")
+  }
+  
+}
+
+
+
+```
+
+
